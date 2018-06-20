@@ -19,5 +19,4 @@ plot "multiread.spp_20000.sv_15.mrs_1.ks_30.csv" u 1:7 with lines lc 1 title "MR
     "multiread.spp_20000.sv_15.mrs_12.ks_30.csv" u 1:7 with lines lc 12 title "MRS=12", \
     "multiread.spp_20000.sv_15.mrs_13.ks_30.csv" u 1:7 with lines lc 13 title "MRS=13", \
     "multiread.spp_20000.sv_15.mrs_14.ks_30.csv" u 1:7 with lines lc 14 title "MRS=14", \
-    "multiread.spp_20000.sv_15.mrs_15.ks_30.csv" u 1:7 with lines lc 15 title "MRS=15", \
-    "multiread.spp_20000.sv_15.mrs_16.ks_30.csv" u 1:7 with lines lc 16 title "MRS=16"
+    "multiread.spp_20000.sv_15.mrs_15.ks_30.csv" u 1:7 with lines lc 15 title "MRS=15"
