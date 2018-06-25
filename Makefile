@@ -1,6 +1,7 @@
 RAMCLOUD_OBJ_DIR := $(RAMCLOUD_HOME)/obj.jni-updates
 
-TARGETS :=  rcperf
+TARGETS :=  rcperf \
+  	    listperf
 
 all: $(TARGETS)
 
