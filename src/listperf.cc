@@ -402,7 +402,7 @@ try
 
             fprintf(datFile, "%12d %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f\n", 
                 head_segment_size,
-                (double)sum / (double)samples_per_point,
+                (double)sum / (double)samples_per_point / 1000.0,
                 latencyVec[samples_per_point*1/100]/1000.0,
                 latencyVec[samples_per_point*2/100]/1000.0,
                 latencyVec[samples_per_point*5/100]/1000.0,
