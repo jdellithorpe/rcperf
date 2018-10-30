@@ -475,6 +475,110 @@ try
         }
 
         client.dropTable("test");
+      } else if (op.compare("tx_async_multiread") == 0) {
+        for (int sv_idx = 0; sv_idx < server_sizes.size(); sv_idx++) {
+          uint32_t server_size = server_sizes[sv_idx];
+
+          uint64_t tableId = client.createTable("test", server_size);
+
+          for (int ks_idx = 0; ks_idx < key_sizes.size(); ks_idx++) {
+            uint32_t key_size = key_sizes[ks_idx];
+
+            for (int vs_idx = 0; vs_idx < value_sizes.size(); vs_idx++) {
+              uint32_t value_size = value_sizes[vs_idx];
+
+              // Open data file for writing.
+              FILE * datFile;
+              char filename[128];
+              sprintf(filename, "tx_async_multiread.spp_%d.sv_%d.ks_%d.vs_%d.csv", samples_per_point, server_size, key_size, value_size);
+              datFile = fopen(filename, "w");
+              fprintf(datFile, "%12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s\n", 
+                  "MultiSize",
+                  "1th",
+                  "2th",
+                  "5th",
+                  "10th",
+                  "25th",
+                  "50th",
+                  "75th",
+                  "90th",
+                  "95th",
+                  "98th",
+                  "99th");
+
+              for (int ms_idx = 0; ms_idx < multi_sizes.size(); ms_idx++) {
+                uint32_t multi_size = multi_sizes[ms_idx];
+                printf("Multiread Test: server_size: %d, multi_size: %d, key_size: %dB, value_size: %dB\n", server_size, multi_size, key_size, value_size);
+
+                char key[key_size];
+                memset(key, 0, key_size);
+
+                // Write value_size data into objects.
+                for (int i = 0; i < multi_size; i++) {
+                  memcpy(key, (char*)&i, sizeof(int));
+                  char randomValue[value_size];
+                  client.write(tableId, key, key_size, randomValue, value_size);
+                }
+
+                int READOP_POOL_SIZE = 100;
+                Tub<Transaction::ReadOp> readOps[READOP_POOL_SIZE];
+                Buffer values[READOP_POOL_SIZE];
+
+                uint64_t latency[samples_per_point];
+                for (int i = 0; i < samples_per_point; i++) {
+                  Transaction tx(&client);
+
+                  uint64_t start = Cycles::rdtsc();
+                  for (int j = 0; j < multi_size; j++) {
+                    memcpy(key, (char*)&j, sizeof(int));
+                    readOps[j % READOP_POOL_SIZE].construct(&tx, tableId, (const char*)key, key_size, &values[j % READOP_POOL_SIZE], true);
+
+                    if ((j + 1) % READOP_POOL_SIZE == 0) {
+                      for (int k = 0; k < READOP_POOL_SIZE; k++) {
+                        readOps[k]->wait();
+                      }
+                    }
+                  }
+
+                  for (int j = 0; j < (multi_size % READOP_POOL_SIZE); j++) {
+                    readOps[j]->wait();
+                  }
+                  uint64_t end = Cycles::rdtsc();
+
+                  latency[i] = Cycles::toNanoseconds(end-start);
+                }
+
+                std::vector<uint64_t> latencyVec(latency, latency+samples_per_point);
+
+                std::sort(latencyVec.begin(), latencyVec.end());
+
+                uint64_t sum = 0;
+                for (int i = 0; i < samples_per_point; i++) {
+                  sum += latencyVec[i];
+                }
+
+                fprintf(datFile, "%12d %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f\n",
+                    multi_size,
+                    latencyVec[samples_per_point*1/100]/1000.0,
+                    latencyVec[samples_per_point*2/100]/1000.0,
+                    latencyVec[samples_per_point*5/100]/1000.0,
+                    latencyVec[samples_per_point*10/100]/1000.0,
+                    latencyVec[samples_per_point*25/100]/1000.0,
+                    latencyVec[samples_per_point*50/100]/1000.0,
+                    latencyVec[samples_per_point*75/100]/1000.0,
+                    latencyVec[samples_per_point*90/100]/1000.0,
+                    latencyVec[samples_per_point*95/100]/1000.0,
+                    latencyVec[samples_per_point*98/100]/1000.0,
+                    latencyVec[samples_per_point*99/100]/1000.0);
+                fflush(datFile);
+              } // ms_idx
+
+              fclose(datFile);
+            } // vs_idx
+          } // ks_idx
+
+          client.dropTable("test");
+        } // sv_idx
       } else if (op.compare("multiread") == 0) {
         for (int sv_idx = 0; sv_idx < server_sizes.size(); sv_idx++) {
           uint32_t server_size = server_sizes[sv_idx];
@@ -671,7 +775,7 @@ try
                     break;
                   }
                 }
-                
+
                 if (tablet == n % server_size) {
                   n++;
                 }
