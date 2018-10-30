@@ -580,6 +580,29 @@ try
           client.dropTable("test");
         } // sv_idx
       } else if (op.compare("multiread") == 0) {
+        // Open data file for writing.
+        FILE * datFile;
+        char filename[128];
+        sprintf(filename, "multiread.csv");
+        datFile = fopen(filename, "w");
+        fprintf(datFile, "%12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s\n", 
+            "Samples",
+            "ServerSize",
+            "MultiSize",
+            "KeySize",
+            "ValueSize",
+            "1th",
+            "2th",
+            "5th",
+            "10th",
+            "25th",
+            "50th",
+            "75th",
+            "90th",
+            "95th",
+            "98th",
+            "99th");
+
         for (int sv_idx = 0; sv_idx < server_sizes.size(); sv_idx++) {
           uint32_t server_size = server_sizes[sv_idx];
 
@@ -602,25 +625,6 @@ try
 
             for (int ks_idx = 0; ks_idx < key_sizes.size(); ks_idx++) {
               uint32_t key_size = key_sizes[ks_idx];
-
-              // Open data file for writing.
-              FILE * datFile;
-              char filename[128];
-              sprintf(filename, "multiread.spp_%d.sv_%d.mrs_%d.ks_%d.csv", samples_per_point, server_size, multi_size, key_size);
-              datFile = fopen(filename, "w");
-              fprintf(datFile, "%12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s\n", 
-                  "ValueSize",
-                  "1th",
-                  "2th",
-                  "5th",
-                  "10th",
-                  "25th",
-                  "50th",
-                  "75th",
-                  "90th",
-                  "95th",
-                  "98th",
-                  "99th");
 
               // Construct keys.
               char keys[multi_size][key_size];
@@ -686,7 +690,11 @@ try
                   sum += latencyVec[i];
                 }
 
-                fprintf(datFile, "%12d %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f\n", 
+                fprintf(datFile, "%12d %12d %12d %12d %12d %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f\n", 
+                    samples_per_point,
+                    server_size,
+                    multi_size,
+                    key_size,
                     value_size,
                     latencyVec[samples_per_point*1/100]/1000.0,
                     latencyVec[samples_per_point*2/100]/1000.0,
@@ -701,13 +709,13 @@ try
                     latencyVec[samples_per_point*99/100]/1000.0);
                 fflush(datFile);
               } // vs_idx
-
-              fclose(datFile);
             } // ks_idx
           } // ms_idx
 
           client.dropTable("test");
         } // sv_idx
+
+        fclose(datFile);
       } else if (op.compare("multiread_fixeddss") == 0) {
         for (int sv_idx = 0; sv_idx < server_sizes.size(); sv_idx++) {
           uint32_t server_size = server_sizes[sv_idx];
