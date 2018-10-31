@@ -690,23 +690,23 @@ try
                   sum += latencyVec[i];
                 }
 
-                fprintf(datFile, "%12d %12d %12d %12d %12d %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f\n", 
+                fprintf(datFile, "%12d %12d %12d %12d %12d %12.3f %12.3f %12.3f %12.3f %12.3f %12.3f %12.3f %12.3f %12.3f %12.3f %12.3f\n", 
                     samples_per_point,
                     server_size,
                     multi_size,
                     key_size,
                     value_size,
-                    latencyVec[samples_per_point*1/100]/1000.0,
-                    latencyVec[samples_per_point*2/100]/1000.0,
-                    latencyVec[samples_per_point*5/100]/1000.0,
-                    latencyVec[samples_per_point*10/100]/1000.0,
-                    latencyVec[samples_per_point*25/100]/1000.0,
-                    latencyVec[samples_per_point*50/100]/1000.0,
-                    latencyVec[samples_per_point*75/100]/1000.0,
-                    latencyVec[samples_per_point*90/100]/1000.0,
-                    latencyVec[samples_per_point*95/100]/1000.0,
-                    latencyVec[samples_per_point*98/100]/1000.0,
-                    latencyVec[samples_per_point*99/100]/1000.0);
+                    latencyVec[samples_per_point*1/100]/1000.0/multi_size,
+                    latencyVec[samples_per_point*2/100]/1000.0/multi_size,
+                    latencyVec[samples_per_point*5/100]/1000.0/multi_size,
+                    latencyVec[samples_per_point*10/100]/1000.0/multi_size,
+                    latencyVec[samples_per_point*25/100]/1000.0/multi_size,
+                    latencyVec[samples_per_point*50/100]/1000.0/multi_size,
+                    latencyVec[samples_per_point*75/100]/1000.0/multi_size,
+                    latencyVec[samples_per_point*90/100]/1000.0/multi_size,
+                    latencyVec[samples_per_point*95/100]/1000.0/multi_size,
+                    latencyVec[samples_per_point*98/100]/1000.0/multi_size,
+                    latencyVec[samples_per_point*99/100]/1000.0/multi_size);
                 fflush(datFile);
               } // vs_idx
             } // ks_idx
