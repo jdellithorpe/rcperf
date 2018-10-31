@@ -508,7 +508,7 @@ try
 
               for (int ms_idx = 0; ms_idx < multi_sizes.size(); ms_idx++) {
                 uint32_t multi_size = multi_sizes[ms_idx];
-                printf("Multiread Test: server_size: %d, multi_size: %d, key_size: %dB, value_size: %dB\n", server_size, multi_size, key_size, value_size);
+                printf("Tx Async Multiread Test: server_size: %d, multi_size: %d, key_size: %dB, value_size: %dB\n", server_size, multi_size, key_size, value_size);
 
                 char key[key_size];
                 memset(key, 0, key_size);
