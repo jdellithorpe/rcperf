@@ -579,6 +579,156 @@ try
 
           client.dropTable("test");
         } // sv_idx
+      } else if (op.compare("multiread_fixeddss_chunked") == 0) {
+        // Open data file for writing.
+        FILE * datFile;
+        char filename[128];
+        sprintf(filename, "multiread_fixeddss_chunked.csv");
+        datFile = fopen(filename, "w");
+        fprintf(datFile, "%12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s\n", 
+            "Samples",
+            "DatasetSize",
+            "ServerSize",
+            "MultiSize",
+            "KeySize",
+            "ValueSize",
+            "1th",
+            "2th",
+            "5th",
+            "10th",
+            "25th",
+            "50th",
+            "75th",
+            "90th",
+            "95th",
+            "98th",
+            "99th");
+
+        for (int sv_idx = 0; sv_idx < server_sizes.size(); sv_idx++) {
+          uint32_t server_size = server_sizes[sv_idx];
+
+          uint64_t tableId = client.createTable("test", server_size);
+
+          // Calculate hash ranges.
+          uint64_t endKeyHashes[server_size];
+          uint64_t tabletRange = 1 + ~0UL / server_size;
+          for (uint32_t i = 0; i < server_size; i++) {
+            uint64_t startKeyHash = i * tabletRange;
+            uint64_t endKeyHash = startKeyHash + tabletRange - 1;
+            if (i == (server_size - 1))
+              endKeyHash = ~0UL;
+
+            endKeyHashes[i] = endKeyHash;
+          }
+
+          for (int dss_idx = 0; dss_idx < dss_sizes.size(); dss_idx++) {
+            uint32_t dss_size = dss_sizes[dss_idx];
+
+            for (int ks_idx = 0; ks_idx < key_sizes.size(); ks_idx++) {
+              uint32_t key_size = key_sizes[ks_idx];
+
+              // Construct keys.
+              char keys[dss_size][key_size];
+              memset(keys, 0, dss_size * key_size);
+              uint32_t key_candidate = 0;
+              uint32_t n = 0;
+              while (n < dss_size) {
+                sprintf(keys[n], "%d", key_candidate);
+
+                // Find the tablet this key belongs to.
+                uint64_t keyHash = Key::getHash(tableId, (const void*)keys[n],
+                    (uint16_t)key_size);
+                uint64_t tablet = 0;
+                for (uint32_t j = 0; j < server_size; j++) {
+                  if (keyHash <= endKeyHashes[j]) {
+                    tablet = j;
+                    break;
+                  }
+                }
+                
+                if (tablet == n % server_size) {
+                  n++;
+                }
+
+                key_candidate++;
+              }
+
+              for (int vs_idx = 0; vs_idx < value_sizes.size(); vs_idx++) {
+                uint32_t value_size = value_sizes[vs_idx];
+
+                // Write out dataset.
+                for (int i = 0; i < dss_size; i++) {
+                  char randomValue[value_size];
+                  client.write(tableId, keys[i], key_size, randomValue, value_size);
+                }
+
+                for (int ms_idx = 0; ms_idx < multi_sizes.size(); ms_idx++) {
+                  uint32_t multi_size = multi_sizes[ms_idx];
+
+                  printf("Multiread Fixed DSS Chunked Test: server_size: %d, dss_size: %d, key_size: %dB, value_size: %dB, multi_size: %d\n", server_size, dss_size, key_size, value_size, multi_size);
+
+                  // Prepare multiread data structures.
+                  MultiReadObject requestObjects[multi_size];
+                  MultiReadObject* requests[multi_size];
+                  Tub<ObjectBuffer> values[multi_size];
+
+                  uint64_t latency[samples_per_point];
+                  for (int i = 0; i < samples_per_point; i++) {
+                    uint64_t start = Cycles::rdtsc();
+                    uint32_t mark = 0;
+                    while (mark < dss_size) {
+                      uint32_t batch_size = std::min(multi_size, dss_size - mark);
+                      for (int j = 0; j < batch_size; j++) {
+                        requestObjects[j] = MultiReadObject(tableId, 
+                            keys[mark + j], key_size, &values[j]);
+                        requests[j] = &requestObjects[j];
+                      }
+
+                      client.multiRead(requests, batch_size);
+
+                      mark += batch_size;
+                    }
+                    uint64_t end = Cycles::rdtsc();
+                    latency[i] = Cycles::toNanoseconds(end-start);
+                  }
+
+                  std::vector<uint64_t> latencyVec(latency, latency+samples_per_point);
+
+                  std::sort(latencyVec.begin(), latencyVec.end());
+
+                  uint64_t sum = 0;
+                  for (int i = 0; i < samples_per_point; i++) {
+                    sum += latencyVec[i];
+                  }
+
+                  fprintf(datFile, "%12d %12d %12d %12d %12d %12d %12.3f %12.3f %12.3f %12.3f %12.3f %12.3f %12.3f %12.3f %12.3f %12.3f %12.3f\n", 
+                      samples_per_point,
+                      dss_size,
+                      server_size,
+                      multi_size,
+                      key_size,
+                      value_size,
+                      latencyVec[samples_per_point*1/100]/1000.0,
+                      latencyVec[samples_per_point*2/100]/1000.0,
+                      latencyVec[samples_per_point*5/100]/1000.0,
+                      latencyVec[samples_per_point*10/100]/1000.0,
+                      latencyVec[samples_per_point*25/100]/1000.0,
+                      latencyVec[samples_per_point*50/100]/1000.0,
+                      latencyVec[samples_per_point*75/100]/1000.0,
+                      latencyVec[samples_per_point*90/100]/1000.0,
+                      latencyVec[samples_per_point*95/100]/1000.0,
+                      latencyVec[samples_per_point*98/100]/1000.0,
+                      latencyVec[samples_per_point*99/100]/1000.0);
+                  fflush(datFile);
+                } // ms_idx
+              } // vs_idx
+            } // ks_idx
+          } // dss_idx
+
+          client.dropTable("test");
+        } // sv_idx
+
+        fclose(datFile);
       } else if (op.compare("multiread") == 0) {
         // Open data file for writing.
         FILE * datFile;
