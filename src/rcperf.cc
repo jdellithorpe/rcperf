@@ -244,7 +244,7 @@ try
             key_sizes.push_back(i);
         } else if (key_points_mode.compare("geometric") == 0) {
           double c = pow(10, log10((double)key_range_end/(double)key_range_start) / (double)(key_points - 1));
-          for (int i = key_range_start; i <= key_range_end; i *= c)
+          for (int i = key_range_start; i <= key_range_end; i = ceil(c * i))
             key_sizes.push_back(i);
         } else {
           printf("ERROR: Unknown points mode: %s\n", key_points_mode.c_str());
@@ -263,7 +263,7 @@ try
             value_sizes.push_back(i);
         } else if (value_points_mode.compare("geometric") == 0) {
           double c = pow(10, log10((double)value_range_end/(double)value_range_start) / (double)(value_points - 1));
-          for (int i = value_range_start; i <= value_range_end; i *= c)
+          for (int i = value_range_start; i <= value_range_end; i = ceil(c * i))
             value_sizes.push_back(i);
         } else {
           printf("ERROR: Unknown points mode: %s\n", value_points_mode.c_str());
@@ -282,7 +282,7 @@ try
             dss_sizes.push_back(i);
         } else if (dss_points_mode.compare("geometric") == 0) {
           double c = pow(10, log10((double)dss_range_end/(double)dss_range_start) / (double)(dss_points - 1));
-          for (int i = dss_range_start; i <= dss_range_end; i *= c)
+          for (int i = dss_range_start; i <= dss_range_end; i = ceil(c * i))
             dss_sizes.push_back(i);
         } else {
           printf("ERROR: Unknown points mode: %s\n", dss_points_mode.c_str());
@@ -301,7 +301,7 @@ try
             multi_sizes.push_back(i);
         } else if (multi_points_mode.compare("geometric") == 0) {
           double c = pow(10, log10((double)multi_range_end/(double)multi_range_start) / (double)(multi_points - 1));
-          for (int i = multi_range_start; i <= multi_range_end; i *= c)
+          for (int i = multi_range_start; i <= multi_range_end; i = ceil(c * i))
             multi_sizes.push_back(i);
         } else {
           printf("ERROR: Unknown points mode: %s\n", multi_points_mode.c_str());
@@ -320,7 +320,7 @@ try
             server_sizes.push_back(i);
         } else if (server_points_mode.compare("geometric") == 0) {
           double c = pow(10, log10((double)server_range_end/(double)server_range_start) / (double)(server_points - 1));
-          for (int i = server_range_start; i <= server_range_end; i *= c)
+          for (int i = server_range_start; i <= server_range_end; i = ceil(c * i))
             server_sizes.push_back(i);
         } else {
           printf("ERROR: Unknown points mode: %s\n", server_points_mode.c_str());
