@@ -44,7 +44,7 @@ using namespace RAMCloud;
  * code for this parameter in output file names. Unless noted otherwise for an
  * experiment, they have the listed meanings.
  *   - ds_size (dss): The size of datasets, in terms of total RAMCloud object
- *   bytes.
+ *   bytes (including bytes for both keys and values).
  *   - key_size (ks): The size of RAMCloud object keys in bytes.
  *   - multi_size (ms): The number of objects in a RAMCloud multi{read,write}.
  *   - server_size (ss): The number of RAMCloud servers to use in the 
@@ -78,10 +78,10 @@ using namespace RAMCloud;
  *       - samples_per_point
  *   - multiread_fixeddss: Measures the latency of RAMCloud multireads over
  *   various multiread sizes, where object sizes are automatically calculated to
- *   be ds_size / multi_size, effectively holding the total number of bytes read 
- *   per multiread constant at ds_size while varying multi_size. The aim of this
- *   experiment is find out the optimal number of RAMCloud objects over which to
- *   spread ds_size bytes of data.
+ *   be ds_size / multi_size (inlcuding keys and values), effectively holding
+ *   the total number of bytes read per multiread constant at ds_size while
+ *   varying multi_size. The aim of this experiment is find the optimal number
+ *   of RAMCloud objects over which to spread ds_size bytes of data.
  *     - Parameters:
  *       - ds_size
  *       - multi_size
@@ -984,9 +984,16 @@ try
 
               printf("Multiread Fixed DSS Test: server_size: %d, ds_size: %d, multi_size: %d\n", server_size, ds_size, multi_size);
 
-              // Compute key_size and value_size.
+              // Compute value_size.
               uint32_t key_size = 30; // Use fixed 30B keys.
-              uint32_t value_size = (ds_size - key_size) / multi_size;
+
+              // Check to make sure that we have room left for value bytes.
+              if (key_size * multi_size > ds_size) {
+                printf("WARNING: Unsatisfiable parameter values (ds_size=%d, multi_size=%d). Not enough dataset bytes for values: (key_size=%d * multi_size=%d) > ds_size=%d. Skipping this parameter configuration.\n", ds_size, multi_size, key_size, multi_size, ds_size);
+                continue;
+              }
+
+              uint32_t value_size = (ds_size - (key_size * multi_size)) / multi_size;
 
               // Construct keys.
               char keys[multi_size][key_size];
