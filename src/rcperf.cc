@@ -63,7 +63,9 @@ using namespace RAMCloud;
  *       - value_size
  *       - samples_per_point
  *   - write: Measures the latency of RAMCloud object writes over various key
- *   and value sizes.
+ *   and value sizes. Note below that replication factor is not currently a
+ *   parameter. The user must specify at the command line the number of replicas
+ *   using the --replicas option, which is recorded in the output file name.
  *     - Parameters:
  *       - key_size
  *       - value_size
@@ -167,23 +169,23 @@ try
     uint32_t key_size_start = 30;
     uint32_t key_size_end = 30;
     uint32_t key_size_points = 1;
-    std::string key_size_mode = "linear";
+    std::string key_size_mode = "l";
     uint32_t value_size_start = 100;
     uint32_t value_size_end = 100;
     uint32_t value_size_points = 1;
-    std::string value_size_mode = "linear";
+    std::string value_size_mode = "l";
     uint32_t ds_size_start = 100;
     uint32_t ds_size_end = 100;
     uint32_t ds_size_points = 1;
-    std::string ds_size_mode = "linear";
+    std::string ds_size_mode = "l";
     uint32_t multi_size_start = 32;
     uint32_t multi_size_end = 32;
     uint32_t multi_size_points = 1;
-    std::string multi_size_mode = "linear";
+    std::string multi_size_mode = "l";
     uint32_t server_size_start = 1;
     uint32_t server_size_end = 1;
     uint32_t server_size_points = 1;
-    std::string server_size_mode = "linear";
+    std::string server_size_mode = "l";
     uint32_t samples_per_point = 1000;
 
     std::ifstream cfgFile(configFilename);
@@ -225,6 +227,16 @@ try
             key_size_points = var_int_value;
           } else if (var_name.compare("key_size_mode") == 0) {
             std::string var_value = line.substr(line.find_last_of(' ') + 1, line.length());
+
+            if (var_value.compare("linear") == 0)
+              var_value = "l";
+            else if (var_value.compare("geometric") == 0)
+              var_value = "g";
+            else {
+              printf("ERROR: Unknown parameter stepping mode: %s\n", var_value.c_str());
+              return 1;
+            }
+
             key_size_mode = var_value;
           } else if (var_name.compare("value_size_start") == 0) {
             std::string var_value = line.substr(line.find_last_of(' ') + 1, line.length());
@@ -240,6 +252,16 @@ try
             value_size_points = var_int_value;
           } else if (var_name.compare("value_size_mode") == 0) {
             std::string var_value = line.substr(line.find_last_of(' ') + 1, line.length());
+
+            if (var_value.compare("linear") == 0)
+              var_value = "l";
+            else if (var_value.compare("geometric") == 0)
+              var_value = "g";
+            else {
+              printf("ERROR: Unknown parameter stepping mode: %s\n", var_value.c_str());
+              return 1;
+            }
+
             value_size_mode = var_value;
           } else if (var_name.compare("ds_size_start") == 0) {
             std::string var_value = line.substr(line.find_last_of(' ') + 1, line.length());
@@ -255,6 +277,16 @@ try
             ds_size_points = var_int_value;
           } else if (var_name.compare("ds_size_mode") == 0) {
             std::string var_value = line.substr(line.find_last_of(' ') + 1, line.length());
+
+            if (var_value.compare("linear") == 0)
+              var_value = "l";
+            else if (var_value.compare("geometric") == 0)
+              var_value = "g";
+            else {
+              printf("ERROR: Unknown parameter stepping mode: %s\n", var_value.c_str());
+              return 1;
+            }
+
             ds_size_mode = var_value;
           } else if (var_name.compare("multi_size_start") == 0) {
             std::string var_value = line.substr(line.find_last_of(' ') + 1, line.length());
@@ -270,6 +302,16 @@ try
             multi_size_points = var_int_value;
           } else if (var_name.compare("multi_size_mode") == 0) {
             std::string var_value = line.substr(line.find_last_of(' ') + 1, line.length());
+
+            if (var_value.compare("linear") == 0)
+              var_value = "l";
+            else if (var_value.compare("geometric") == 0)
+              var_value = "g";
+            else {
+              printf("ERROR: Unknown parameter stepping mode: %s\n", var_value.c_str());
+              return 1;
+            }
+
             multi_size_mode = var_value;
           } else if (var_name.compare("server_size_start") == 0) {
             std::string var_value = line.substr(line.find_last_of(' ') + 1, line.length());
@@ -285,6 +327,16 @@ try
             server_size_points = var_int_value;
           } else if (var_name.compare("server_size_mode") == 0) {
             std::string var_value = line.substr(line.find_last_of(' ') + 1, line.length());
+
+            if (var_value.compare("linear") == 0)
+              var_value = "l";
+            else if (var_value.compare("geometric") == 0)
+              var_value = "g";
+            else {
+              printf("ERROR: Unknown parameter stepping mode: %s\n", var_value.c_str());
+              return 1;
+            }
+
             server_size_mode = var_value;
           } else if (var_name.compare("samples_per_point") == 0) {
             std::string var_value = line.substr(line.find_last_of(' ') + 1, line.length());
@@ -309,13 +361,13 @@ try
       std::vector<uint32_t> server_sizes;
 
       if (key_size_points > 1) {
-        if (key_size_mode.compare("linear") == 0) {
+        if (key_size_mode.compare("l") == 0) {
           uint32_t step_size = 
             (key_size_end - key_size_start) / (key_size_points - 1);
 
           for (int i = key_size_start; i <= key_size_end; i += step_size) 
             key_sizes.push_back(i);
-        } else if (key_size_mode.compare("geometric") == 0) {
+        } else if (key_size_mode.compare("g") == 0) {
           double c = pow(10, log10((double)key_size_end/(double)key_size_start) / (double)(key_size_points - 1));
           for (int i = key_size_start; i <= key_size_end; i = ceil(c * i))
             key_sizes.push_back(i);
@@ -328,13 +380,13 @@ try
       }
 
       if (value_size_points > 1) {
-        if (value_size_mode.compare("linear") == 0) {
+        if (value_size_mode.compare("l") == 0) {
           uint32_t step_size = 
             (value_size_end - value_size_start) / (value_size_points - 1);
 
           for (int i = value_size_start; i <= value_size_end; i += step_size) 
             value_sizes.push_back(i);
-        } else if (value_size_mode.compare("geometric") == 0) {
+        } else if (value_size_mode.compare("g") == 0) {
           double c = pow(10, log10((double)value_size_end/(double)value_size_start) / (double)(value_size_points - 1));
           for (int i = value_size_start; i <= value_size_end; i = ceil(c * i))
             value_sizes.push_back(i);
@@ -347,13 +399,13 @@ try
       }
 
       if (ds_size_points > 1) {
-        if (ds_size_mode.compare("linear") == 0) {
+        if (ds_size_mode.compare("l") == 0) {
           uint32_t step_size = 
             (ds_size_end - ds_size_start) / (ds_size_points - 1);
 
           for (int i = ds_size_start; i <= ds_size_end; i += step_size) 
             ds_sizes.push_back(i);
-        } else if (ds_size_mode.compare("geometric") == 0) {
+        } else if (ds_size_mode.compare("g") == 0) {
           double c = pow(10, log10((double)ds_size_end/(double)ds_size_start) / (double)(ds_size_points - 1));
           for (int i = ds_size_start; i <= ds_size_end; i = ceil(c * i))
             ds_sizes.push_back(i);
@@ -366,13 +418,13 @@ try
       }
 
       if (multi_size_points > 1) {
-        if (multi_size_mode.compare("linear") == 0) {
+        if (multi_size_mode.compare("l") == 0) {
           uint32_t step_size = 
             (multi_size_end - multi_size_start) / (multi_size_points - 1);
 
           for (int i = multi_size_start; i <= multi_size_end; i += step_size) 
             multi_sizes.push_back(i);
-        } else if (multi_size_mode.compare("geometric") == 0) {
+        } else if (multi_size_mode.compare("g") == 0) {
           double c = pow(10, log10((double)multi_size_end/(double)multi_size_start) / (double)(multi_size_points - 1));
           for (int i = multi_size_start; i <= multi_size_end; i = ceil(c * i))
             multi_sizes.push_back(i);
@@ -385,13 +437,13 @@ try
       }
 
       if (server_size_points > 1) {
-        if (server_size_mode.compare("linear") == 0) {
+        if (server_size_mode.compare("l") == 0) {
           uint32_t step_size = 
             (server_size_end - server_size_start) / (server_size_points - 1);
 
           for (int i = server_size_start; i <= server_size_end; i += step_size) 
             server_sizes.push_back(i);
-        } else if (server_size_mode.compare("geometric") == 0) {
+        } else if (server_size_mode.compare("g") == 0) {
           double c = pow(10, log10((double)server_size_end/(double)server_size_start) / (double)(server_size_points - 1));
           for (int i = server_size_start; i <= server_size_end; i = ceil(c * i))
             server_sizes.push_back(i);
@@ -406,27 +458,28 @@ try
       if (op.compare("read") == 0) {
         uint64_t tableId = client.createTable("test");
 
+        // Open data file for writing.
+        FILE * datFile;
+        char filename[512];
+        sprintf(filename, "read.spp_%d.ks_%d_%d_%d%s.vs_%d_%d_%d%s.csv", samples_per_point, key_size_start, key_size_end, key_size_points, key_size_mode.c_str(), value_size_start, value_size_end, value_size_points, value_size_mode.c_str());
+        datFile = fopen(filename, "w");
+        fprintf(datFile, "%12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s\n", 
+            "KeySize",
+            "ValueSize",
+            "1th",
+            "2th",
+            "5th",
+            "10th",
+            "25th",
+            "50th",
+            "75th",
+            "90th",
+            "95th",
+            "98th",
+            "99th");
+
         for (int ks_idx = 0; ks_idx < key_sizes.size(); ks_idx++) {
           uint32_t key_size = key_sizes[ks_idx];
-
-          // Open data file for writing.
-          FILE * datFile;
-          char filename[128];
-          sprintf(filename, "read.spp_%d.ks_%d.csv", samples_per_point, key_size);
-          datFile = fopen(filename, "w");
-          fprintf(datFile, "%12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s\n", 
-              "ValueSize",
-              "1th",
-              "2th",
-              "5th",
-              "10th",
-              "25th",
-              "50th",
-              "75th",
-              "90th",
-              "95th",
-              "98th",
-              "99th");
 
           for (int vs_idx = 0; vs_idx < value_sizes.size(); vs_idx++) {
             uint32_t value_size = value_sizes[vs_idx];
@@ -456,7 +509,8 @@ try
               sum += latencyVec[i];
             }
 
-            fprintf(datFile, "%12d %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f\n", 
+            fprintf(datFile, "%12d %12d %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f\n", 
+                key_size,
                 value_size,
                 latencyVec[samples_per_point*1/100]/1000.0,
                 latencyVec[samples_per_point*2/100]/1000.0,
@@ -470,36 +524,37 @@ try
                 latencyVec[samples_per_point*98/100]/1000.0,
                 latencyVec[samples_per_point*99/100]/1000.0);
             fflush(datFile);
-          }
+          } // vs_idx
+        } // ks_idx
 
-          fclose(datFile);
-        }
+        fclose(datFile);
 
         client.dropTable("test");
       } else if (op.compare("write") == 0) {
         uint64_t tableId = client.createTable("test");
 
+        // Open data file for writing.
+        FILE * datFile;
+        char filename[512];
+        sprintf(filename, "write.spp_%d.rf_%d.ks_%d_%d_%d%s.vs_%d_%d_%d%s.csv", samples_per_point, replicas, key_size_start, key_size_end, key_size_points, key_size_mode.c_str(), value_size_start, value_size_end, value_size_points, value_size_mode.c_str());
+        datFile = fopen(filename, "w");
+        fprintf(datFile, "%12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s\n", 
+            "KeySize",
+            "ValueSize",
+            "1th",
+            "2th",
+            "5th",
+            "10th",
+            "25th",
+            "50th",
+            "75th",
+            "90th",
+            "95th",
+            "98th",
+            "99th");
+
         for (int ks_idx = 0; ks_idx < key_sizes.size(); ks_idx++) {
           uint32_t key_size = key_sizes[ks_idx];
-
-          // Open data file for writing.
-          FILE * datFile;
-          char filename[128];
-          sprintf(filename, "write.spp_%d.rf_%d.ks_%d.csv", samples_per_point, replicas, key_size);
-          datFile = fopen(filename, "w");
-          fprintf(datFile, "%12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s\n", 
-              "ValueSize",
-              "1th",
-              "2th",
-              "5th",
-              "10th",
-              "25th",
-              "50th",
-              "75th",
-              "90th",
-              "95th",
-              "98th",
-              "99th");
 
           for (int vs_idx = 0; vs_idx < value_sizes.size(); vs_idx++) {
             uint32_t value_size = value_sizes[vs_idx];
@@ -528,7 +583,8 @@ try
               sum += latencyVec[i];
             }
 
-            fprintf(datFile, "%12d %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f\n", 
+            fprintf(datFile, "%12d %12d %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f\n", 
+                key_size,
                 value_size,
                 latencyVec[samples_per_point*1/100]/1000.0,
                 latencyVec[samples_per_point*2/100]/1000.0,
@@ -542,13 +598,35 @@ try
                 latencyVec[samples_per_point*98/100]/1000.0,
                 latencyVec[samples_per_point*99/100]/1000.0);
             fflush(datFile);
-          }
+          } // vs_idx
+        } // ks_idx
 
-          fclose(datFile);
-        }
+        fclose(datFile);
 
         client.dropTable("test");
       } else if (op.compare("readop_async") == 0) {
+        // Open data file for writing.
+        FILE * datFile;
+        char filename[512];
+        sprintf(filename, "readop_async.spp_%d.sv_%d_%d_%d%s.ks_%d_%d_%d%s.vs_%d_%d_%d%s.ms_%d_%d_%d%s.csv", samples_per_point, server_size_start, server_size_end, server_size_points, server_size_mode.c_str(), key_size_start, key_size_end, key_size_points, key_size_mode.c_str(), value_size_start, value_size_end, value_size_points, value_size_mode.c_str(), multi_size_start, multi_size_end, multi_size_points, multi_size_mode.c_str());
+        datFile = fopen(filename, "w");
+        fprintf(datFile, "%12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s\n", 
+            "ServerSize",
+            "KeySize",
+            "ValueSize",
+            "MultiSize",
+            "1th",
+            "2th",
+            "5th",
+            "10th",
+            "25th",
+            "50th",
+            "75th",
+            "90th",
+            "95th",
+            "98th",
+            "99th");
+
         for (int sv_idx = 0; sv_idx < server_sizes.size(); sv_idx++) {
           uint32_t server_size = server_sizes[sv_idx];
 
@@ -560,28 +638,9 @@ try
             for (int vs_idx = 0; vs_idx < value_sizes.size(); vs_idx++) {
               uint32_t value_size = value_sizes[vs_idx];
 
-              // Open data file for writing.
-              FILE * datFile;
-              char filename[128];
-              sprintf(filename, "readop_async.spp_%d.sv_%d.ks_%d.vs_%d.csv", samples_per_point, server_size, key_size, value_size);
-              datFile = fopen(filename, "w");
-              fprintf(datFile, "%12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s\n", 
-                  "MultiSize",
-                  "1th",
-                  "2th",
-                  "5th",
-                  "10th",
-                  "25th",
-                  "50th",
-                  "75th",
-                  "90th",
-                  "95th",
-                  "98th",
-                  "99th");
-
               for (int ms_idx = 0; ms_idx < multi_sizes.size(); ms_idx++) {
                 uint32_t multi_size = multi_sizes[ms_idx];
-                printf("Tx Async Multiread Test: server_size: %d, multi_size: %d, key_size: %dB, value_size: %dB\n", server_size, multi_size, key_size, value_size);
+                printf("Asynchronous ReadOp Test: server_size: %d, key_size: %dB, value_size: %dB, multi_size: %d\n", server_size, key_size, value_size, multi_size);
 
                 char key[key_size];
                 memset(key, 0, key_size);
@@ -630,7 +689,10 @@ try
                   sum += latencyVec[i];
                 }
 
-                fprintf(datFile, "%12d %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f\n",
+                fprintf(datFile, "%12d %12d %12d %12d %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f\n",
+                    server_size,
+                    key_size,
+                    value_size,
                     multi_size,
                     latencyVec[samples_per_point*1/100]/1000.0,
                     latencyVec[samples_per_point*2/100]/1000.0,
@@ -645,26 +707,25 @@ try
                     latencyVec[samples_per_point*99/100]/1000.0);
                 fflush(datFile);
               } // ms_idx
-
-              fclose(datFile);
             } // vs_idx
           } // ks_idx
 
           client.dropTable("test");
         } // sv_idx
+
+        fclose(datFile);
       } else if (op.compare("multiread_fixeddss_chunked") == 0) {
         // Open data file for writing.
         FILE * datFile;
-        char filename[128];
-        sprintf(filename, "multiread_fixeddss_chunked.csv");
+        char filename[512];
+        sprintf(filename, "multiread_fixeddss_chunked.spp_%d.ss_%d_%d_%d%s.ks_%d_%d_%d%s.vs_%d_%d_%d%s.ds_%d_%d_%d%s.ms_%d_%d_%d%s.csv", samples_per_point, server_size_start, server_size_end, server_size_points, server_size_mode.c_str(), key_size_start, key_size_end, key_size_points, key_size_mode.c_str(), value_size_start, value_size_end, value_size_points, value_size_mode.c_str(), ds_size_start, ds_size_end, ds_size_points, ds_size_mode.c_str(), multi_size_start, multi_size_end, multi_size_points, multi_size_mode.c_str());
         datFile = fopen(filename, "w");
-        fprintf(datFile, "%12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s\n", 
-            "Samples",
-            "DatasetSize",
+        fprintf(datFile, "%12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s\n", 
             "ServerSize",
-            "MultiSize",
             "KeySize",
             "ValueSize",
+            "DatasetSize",
+            "MultiSize",
             "1th",
             "2th",
             "5th",
@@ -774,13 +835,12 @@ try
                     sum += latencyVec[i];
                   }
 
-                  fprintf(datFile, "%12d %12d %12d %12d %12d %12d %12.3f %12.3f %12.3f %12.3f %12.3f %12.3f %12.3f %12.3f %12.3f %12.3f %12.3f\n", 
-                      samples_per_point,
-                      ds_size,
+                  fprintf(datFile, "%12d %12d %12d %12d %12d %12.3f %12.3f %12.3f %12.3f %12.3f %12.3f %12.3f %12.3f %12.3f %12.3f %12.3f\n", 
                       server_size,
-                      multi_size,
                       key_size,
                       value_size,
+                      ds_size,
+                      multi_size,
                       latencyVec[samples_per_point*1/100]/1000.0,
                       latencyVec[samples_per_point*2/100]/1000.0,
                       latencyVec[samples_per_point*5/100]/1000.0,
@@ -805,15 +865,14 @@ try
       } else if (op.compare("multiread") == 0) {
         // Open data file for writing.
         FILE * datFile;
-        char filename[128];
-        sprintf(filename, "multiread.csv");
+        char filename[512];
+        sprintf(filename, "multiread.spp_%d.ss_%d_%d_%d%s.ks_%d_%d_%d%s.vs_%d_%d_%d%s.ms_%d_%d_%d%s.csv", samples_per_point, server_size_start, server_size_end, server_size_points, server_size_mode.c_str(), key_size_start, key_size_end, key_size_points, key_size_mode.c_str(), value_size_start, value_size_end, value_size_points, value_size_mode.c_str(), multi_size_start, multi_size_end, multi_size_points, multi_size_mode.c_str());
         datFile = fopen(filename, "w");
-        fprintf(datFile, "%12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s\n", 
-            "Samples",
+        fprintf(datFile, "%12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s\n", 
             "ServerSize",
-            "MultiSize",
             "KeySize",
             "ValueSize",
+            "MultiSize",
             "1th",
             "2th",
             "5th",
@@ -913,12 +972,11 @@ try
                   sum += latencyVec[i];
                 }
 
-                fprintf(datFile, "%12d %12d %12d %12d %12d %12.3f %12.3f %12.3f %12.3f %12.3f %12.3f %12.3f %12.3f %12.3f %12.3f %12.3f\n", 
-                    samples_per_point,
+                fprintf(datFile, "%12d %12d %12d %12d %12.3f %12.3f %12.3f %12.3f %12.3f %12.3f %12.3f %12.3f %12.3f %12.3f %12.3f\n", 
                     server_size,
-                    multi_size,
                     key_size,
                     value_size,
+                    multi_size,
                     latencyVec[samples_per_point*1/100]/1000.0/multi_size,
                     latencyVec[samples_per_point*2/100]/1000.0/multi_size,
                     latencyVec[samples_per_point*5/100]/1000.0/multi_size,
@@ -940,6 +998,27 @@ try
 
         fclose(datFile);
       } else if (op.compare("multiread_fixeddss") == 0) {
+        // Open data file for writing.
+        FILE * datFile;
+        char filename[512];
+        sprintf(filename, "multiread_fixeddss.spp_%d.ss_%d_%d_%d%s.ds_%d_%d_%d%s.ms_%d_%d_%d%s.csv", samples_per_point, server_size_start, server_size_end, server_size_points, server_size_mode.c_str(), ds_size_start, ds_size_end, ds_size_points, ds_size_mode.c_str(), multi_size_start, multi_size_end, multi_size_points, multi_size_mode.c_str());
+        datFile = fopen(filename, "w");
+        fprintf(datFile, "%12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s\n",
+            "ServerSize",
+            "DatasetSize",
+            "MultiSize",
+            "1th",
+            "2th",
+            "5th",
+            "10th",
+            "25th",
+            "50th",
+            "75th",
+            "90th",
+            "95th",
+            "98th",
+            "99th");
+
         for (int sv_idx = 0; sv_idx < server_sizes.size(); sv_idx++) {
           uint32_t server_size = server_sizes[sv_idx];
 
@@ -959,25 +1038,6 @@ try
 
           for (int dss_idx = 0; dss_idx < ds_sizes.size(); dss_idx++) {
             uint32_t ds_size = ds_sizes[dss_idx];
-
-            // Open data file for writing.
-            FILE * datFile;
-            char filename[128];
-            sprintf(filename, "multiread_fixeddss.spp_%d.sv_%d.dss_%d.csv", samples_per_point, server_size, ds_size);
-            datFile = fopen(filename, "w");
-            fprintf(datFile, "%12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s\n", 
-                "MultiSize",
-                "1th",
-                "2th",
-                "5th",
-                "10th",
-                "25th",
-                "50th",
-                "75th",
-                "90th",
-                "95th",
-                "98th",
-                "99th");
 
             for (int ms_idx = 0; ms_idx < multi_sizes.size(); ms_idx++) {
               uint32_t multi_size = multi_sizes[ms_idx];
@@ -1055,7 +1115,9 @@ try
                 sum += latencyVec[i];
               }
 
-              fprintf(datFile, "%12d %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f\n", 
+              fprintf(datFile, "%12d %12d %12d %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f %12.1f\n", 
+                  server_size,
+                  ds_size,
                   multi_size,
                   latencyVec[samples_per_point*1/100]/1000.0,
                   latencyVec[samples_per_point*2/100]/1000.0,
@@ -1070,12 +1132,12 @@ try
                   latencyVec[samples_per_point*99/100]/1000.0);
               fflush(datFile);
             } // ms_idx
-
-            fclose(datFile);
           } // dss_idx
 
           client.dropTable("test");
         } // sv_idx
+
+        fclose(datFile);
       } else {
         printf("ERROR: Unknown operation: %s\n", op.c_str());
         return 1;
