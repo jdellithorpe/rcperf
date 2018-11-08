@@ -40,8 +40,11 @@ using namespace RAMCloud;
 
 /* Sweeping parameters in configuration file. Each is suffixed with {_start,
  * _end, _points, _mode} to specify the start of, end of, points in, and step
- * mode of, the parameter range for sweeping. In parentheses is the shorthand
- * code for this parameter in output file names. Unless noted otherwise for an
+ * mode of, the parameter range for sweeping. For the "mode" parameter, values
+ * of {linear,geometric} are accepted (linear meaning data points are evenly
+ * spaced apart and geometrically meaning the ratio between a point and the
+ * previous point is a constant factor). In parentheses is the shorthand code
+ * for this parameter in output file names. Unless noted otherwise for an
  * experiment, they have the listed meanings.
  *   - ds_size (dss): The size of datasets, in terms of total RAMCloud object
  *   bytes (including bytes for both keys and values).
