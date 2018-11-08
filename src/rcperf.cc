@@ -1083,25 +1083,59 @@ try
 
           uint64_t tableId = client.createTable("test", server_size);
 
+          // Calculate hash ranges.
+          uint64_t endKeyHashes[server_size];
+          uint64_t tabletRange = 1 + ~0UL / server_size;
+          for (uint32_t i = 0; i < server_size; i++) {
+            uint64_t startKeyHash = i * tabletRange;
+            uint64_t endKeyHash = startKeyHash + tabletRange - 1;
+            if (i == (server_size - 1))
+              endKeyHash = ~0UL;
+
+            endKeyHashes[i] = endKeyHash;
+          }
+
           for (int ks_idx = 0; ks_idx < key_sizes.size(); ks_idx++) {
             uint32_t key_size = key_sizes[ks_idx];
+
+            // Construct keys.
+            char keys[multi_size_max][key_size];
+            memset(keys, 0, multi_size_max * key_size);
+            uint32_t key_candidate = 0;
+            uint32_t n = 0;
+            while (n < multi_size_max) {
+              sprintf(keys[n], "%d", key_candidate);
+
+              // Find the tablet this key belongs to.
+              uint64_t keyHash = Key::getHash(tableId, (const void*)keys[n],
+                  (uint16_t)key_size);
+              uint64_t tablet = 0;
+              for (uint32_t j = 0; j < server_size; j++) {
+                if (keyHash <= endKeyHashes[j]) {
+                  tablet = j;
+                  break;
+                }
+              }
+              
+              if (tablet == n % server_size) {
+                n++;
+              }
+
+              key_candidate++;
+            }
 
             for (int vs_idx = 0; vs_idx < value_sizes.size(); vs_idx++) {
               uint32_t value_size = value_sizes[vs_idx];
 
+              // Write out dataset.
+              for (int i = 0; i < ds_size_max; i++) {
+                char randomValue[value_size];
+                client.write(tableId, keys[i], key_size, randomValue, value_size);
+              }
+
               for (int ms_idx = 0; ms_idx < multi_sizes.size(); ms_idx++) {
                 uint32_t multi_size = multi_sizes[ms_idx];
                 printf("Asynchronous ReadOp Test: server_size: %d, key_size: %dB, value_size: %dB, multi_size: %d\n", server_size, key_size, value_size, multi_size);
-
-                char key[key_size];
-                memset(key, 0, key_size);
-
-                // Write value_size data into objects.
-                for (int i = 0; i < multi_size; i++) {
-                  memcpy(key, (char*)&i, sizeof(int));
-                  char randomValue[value_size];
-                  client.write(tableId, key, key_size, randomValue, value_size);
-                }
 
                 int READOP_POOL_SIZE = 100;
                 Tub<Transaction::ReadOp> readOps[READOP_POOL_SIZE];
@@ -1113,8 +1147,7 @@ try
 
                   uint64_t start = Cycles::rdtsc();
                   for (int j = 0; j < multi_size; j++) {
-                    memcpy(key, (char*)&j, sizeof(int));
-                    readOps[j % READOP_POOL_SIZE].construct(&tx, tableId, (const char*)key, key_size, &values[j % READOP_POOL_SIZE], true);
+                    readOps[j % READOP_POOL_SIZE].construct(&tx, tableId, (const char*)keys[j], key_size, &values[j % READOP_POOL_SIZE], true);
 
                     if ((j + 1) % READOP_POOL_SIZE == 0) {
                       for (int k = 0; k < READOP_POOL_SIZE; k++) {
