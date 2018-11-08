@@ -417,6 +417,14 @@ try
         ds_sizes.push_back(ds_size_start);
       }
 
+      // Calculate the maximum ds_size, used later to more efficiently write
+      // the test dataset into RAMCloud.
+      uint32_t ds_size_max = 0;
+      for (int i = 0; i < ds_sizes.size(); i++) {
+        if (ds_sizes[i] > ds_size_max)
+          ds_size_max = ds_sizes[i];
+      }
+
       if (multi_size_points > 1) {
         if (multi_size_mode.compare("l") == 0) {
           uint32_t step_size = 
@@ -434,6 +442,14 @@ try
         }
       } else {
         multi_sizes.push_back(multi_size_start);
+      }
+
+      // Calculate the maximum multi_size, used later to more efficiently write
+      // the test dataset into RAMCloud.
+      uint32_t multi_size_max = 0;
+      for (int i = 0; i < multi_sizes.size(); i++) {
+        if (multi_sizes[i] > multi_size_max)
+          multi_size_max = multi_sizes[i];
       }
 
       if (server_size_points > 1) {
@@ -644,47 +660,48 @@ try
             endKeyHashes[i] = endKeyHash;
           }
 
-          for (int ms_idx = 0; ms_idx < multi_sizes.size(); ms_idx++) {
-            uint32_t multi_size = multi_sizes[ms_idx];
+          for (int ks_idx = 0; ks_idx < key_sizes.size(); ks_idx++) {
+            uint32_t key_size = key_sizes[ks_idx];
 
-            for (int ks_idx = 0; ks_idx < key_sizes.size(); ks_idx++) {
-              uint32_t key_size = key_sizes[ks_idx];
+            // Construct keys.
+            char keys[multi_size_max][key_size];
+            memset(keys, 0, multi_size_max * key_size);
+            uint32_t key_candidate = 0;
+            uint32_t n = 0;
+            while (n < multi_size_max) {
+              sprintf(keys[n], "%d", key_candidate);
 
-              // Construct keys.
-              char keys[multi_size][key_size];
-              memset(keys, 0, multi_size * key_size);
-              uint32_t key_candidate = 0;
-              uint32_t n = 0;
-              while (n < multi_size) {
-                sprintf(keys[n], "%d", key_candidate);
-
-                // Find the tablet this key belongs to.
-                uint64_t keyHash = Key::getHash(tableId, (const void*)keys[n],
-                    (uint16_t)key_size);
-                uint64_t tablet = 0;
-                for (uint32_t j = 0; j < server_size; j++) {
-                  if (keyHash <= endKeyHashes[j]) {
-                    tablet = j;
-                    break;
-                  }
+              // Find the tablet this key belongs to.
+              uint64_t keyHash = Key::getHash(tableId, (const void*)keys[n],
+                  (uint16_t)key_size);
+              uint64_t tablet = 0;
+              for (uint32_t j = 0; j < server_size; j++) {
+                if (keyHash <= endKeyHashes[j]) {
+                  tablet = j;
+                  break;
                 }
-                
-                if (tablet == n % server_size) {
-                  n++;
-                }
-
-                key_candidate++;
+              }
+              
+              if (tablet == n % server_size) {
+                n++;
               }
 
-              for (int vs_idx = 0; vs_idx < value_sizes.size(); vs_idx++) {
-                uint32_t value_size = value_sizes[vs_idx];
-                printf("Multiread Test: server_size: %d, multi_size: %d, key_size: %dB, value_size: %dB\n", server_size, multi_size, key_size, value_size);
+              key_candidate++;
+            }
 
-                // Write value_size data into objects.
-                for (int i = 0; i < multi_size; i++) {
-                  char randomValue[value_size];
-                  client.write(tableId, keys[i], key_size, randomValue, value_size);
-                }
+            for (int vs_idx = 0; vs_idx < value_sizes.size(); vs_idx++) {
+              uint32_t value_size = value_sizes[vs_idx];
+
+              // Write value_size data into objects.
+              for (int i = 0; i < multi_size_max; i++) {
+                char randomValue[value_size];
+                client.write(tableId, keys[i], key_size, randomValue, value_size);
+              }
+
+              for (int ms_idx = 0; ms_idx < multi_sizes.size(); ms_idx++) {
+                uint32_t multi_size = multi_sizes[ms_idx];
+
+                printf("Multiread Test: server_size: %d, key_size: %dB, value_size: %dB, multi_size: %d\n", server_size, key_size, value_size, multi_size);
 
                 // Prepare multiread data structures.
                 MultiReadObject requestObjects[multi_size];
@@ -731,9 +748,9 @@ try
                     latencyVec[samples_per_point*98/100]/1000.0/multi_size,
                     latencyVec[samples_per_point*99/100]/1000.0/multi_size);
                 fflush(datFile);
-              } // vs_idx
-            } // ks_idx
-          } // ms_idx
+              } // ms_idx
+            } // vs_idx
+          } // ks_idx
 
           client.dropTable("test");
         } // sv_idx
@@ -921,46 +938,46 @@ try
             endKeyHashes[i] = endKeyHash;
           }
 
-          for (int dss_idx = 0; dss_idx < ds_sizes.size(); dss_idx++) {
-            uint32_t ds_size = ds_sizes[dss_idx];
+          for (int ks_idx = 0; ks_idx < key_sizes.size(); ks_idx++) {
+            uint32_t key_size = key_sizes[ks_idx];
 
-            for (int ks_idx = 0; ks_idx < key_sizes.size(); ks_idx++) {
-              uint32_t key_size = key_sizes[ks_idx];
+            // Construct keys.
+            char keys[ds_size_max][key_size];
+            memset(keys, 0, ds_size_max * key_size);
+            uint32_t key_candidate = 0;
+            uint32_t n = 0;
+            while (n < ds_size_max) {
+              sprintf(keys[n], "%d", key_candidate);
 
-              // Construct keys.
-              char keys[ds_size][key_size];
-              memset(keys, 0, ds_size * key_size);
-              uint32_t key_candidate = 0;
-              uint32_t n = 0;
-              while (n < ds_size) {
-                sprintf(keys[n], "%d", key_candidate);
-
-                // Find the tablet this key belongs to.
-                uint64_t keyHash = Key::getHash(tableId, (const void*)keys[n],
-                    (uint16_t)key_size);
-                uint64_t tablet = 0;
-                for (uint32_t j = 0; j < server_size; j++) {
-                  if (keyHash <= endKeyHashes[j]) {
-                    tablet = j;
-                    break;
-                  }
+              // Find the tablet this key belongs to.
+              uint64_t keyHash = Key::getHash(tableId, (const void*)keys[n],
+                  (uint16_t)key_size);
+              uint64_t tablet = 0;
+              for (uint32_t j = 0; j < server_size; j++) {
+                if (keyHash <= endKeyHashes[j]) {
+                  tablet = j;
+                  break;
                 }
-                
-                if (tablet == n % server_size) {
-                  n++;
-                }
-
-                key_candidate++;
+              }
+              
+              if (tablet == n % server_size) {
+                n++;
               }
 
-              for (int vs_idx = 0; vs_idx < value_sizes.size(); vs_idx++) {
-                uint32_t value_size = value_sizes[vs_idx];
+              key_candidate++;
+            }
 
-                // Write out dataset.
-                for (int i = 0; i < ds_size; i++) {
-                  char randomValue[value_size];
-                  client.write(tableId, keys[i], key_size, randomValue, value_size);
-                }
+            for (int vs_idx = 0; vs_idx < value_sizes.size(); vs_idx++) {
+              uint32_t value_size = value_sizes[vs_idx];
+
+              // Write out dataset.
+              for (int i = 0; i < ds_size_max; i++) {
+                char randomValue[value_size];
+                client.write(tableId, keys[i], key_size, randomValue, value_size);
+              }
+
+              for (int dss_idx = 0; dss_idx < ds_sizes.size(); dss_idx++) {
+                uint32_t ds_size = ds_sizes[dss_idx];
 
                 for (int ms_idx = 0; ms_idx < multi_sizes.size(); ms_idx++) {
                   uint32_t multi_size = multi_sizes[ms_idx];
@@ -1020,9 +1037,9 @@ try
                       latencyVec[samples_per_point*99/100]/1000.0);
                   fflush(datFile);
                 } // ms_idx
-              } // vs_idx
-            } // ks_idx
-          } // dss_idx
+              } // dss_idx
+            } // vs_idx
+          } // ks_idx
 
           client.dropTable("test");
         } // sv_idx
