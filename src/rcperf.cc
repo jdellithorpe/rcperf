@@ -71,7 +71,9 @@ using namespace RAMCloud;
  *       - value_size
  *       - samples_per_point
  *   - multiread: Measures the latency of RAMCloud multireads over various key,
- *   value, multiread sizes, and number of servers.
+ *   value, multiread sizes, and number of servers. For multiple servers, keys
+ *   are specially selected to produce an even distribution of RAMCloud objects
+ *   over the servers.
  *     - Parameters:
  *       - key_size
  *       - value_size
@@ -83,7 +85,9 @@ using namespace RAMCloud;
  *   be ds_size / multi_size (inlcuding keys and values), effectively holding
  *   the total number of bytes read per multiread constant at ds_size while
  *   varying multi_size. The aim of this experiment is find the optimal number
- *   of RAMCloud objects over which to spread ds_size bytes of data.
+ *   of RAMCloud objects over which to spread ds_size bytes of data. For
+ *   multiple servers, keys are specially selected to produce an even
+ *   distribution of RAMCloud objects over the servers.
  *     - Parameters:
  *       - ds_size
  *       - multi_size
@@ -92,7 +96,9 @@ using namespace RAMCloud;
  *   - multiread_fixeddss_chunked: Measures the latency of reading a dataset of
  *   ds_size # of objects in chunks of multi_size # of objects. The aim of this
  *   experiment is, given some # of objects of a certain size, what is the
- *   optimal multiread size to use to read all the objects.
+ *   optimal multiread size to use to read all the objects. For multiple
+ *   servers, keys are specially selected to produce an even distribution of
+ *   RAMCloud objects over the servers.
  *     - Parameters:
  *       - ds_size: Here ds_size refers to # of objects in the dataset, not the
  *       # of bytes. Total number of bytes is (ds_size)*(key_size + value_size).
@@ -104,7 +110,8 @@ using namespace RAMCloud;
  *   - readop_async: Measures the latency of asynchronous batched ReadOps
  *   over various batch sizes, key/value sizes, and number of servers. ReadOps
  *   are constructed together and then wait() is called to execute them in a
- *   batch.
+ *   batch. For multiple servers, keys are specially selected to produce an even 
+ *   distribution of RAMCloud objects over the servers.
  *     - Parameters:
  *       - key_size
  *       - value_size
