@@ -1,7 +1,7 @@
-RAMCLOUD_OBJ_DIR := $(RAMCLOUD_HOME)/obj.rdwr-nanologging
+RAMCLOUD_OBJ_DIR := $(RAMCLOUD_HOME)/obj.torcdb-experiments
 
 TARGETS :=  rcperf \
-  	    listperf
+						listperf
 
 all: $(TARGETS)
 
